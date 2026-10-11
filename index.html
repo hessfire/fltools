@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>fltools</title>
+<style>
+  :root { --accent: #AABFFF; }
+  body { font: 14px system-ui, sans-serif; background: #000; color: #ddd; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+  #drop { border: 2px dashed #262626; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; color: #999; background: #050505; }
+  body:has(#out:empty) #drop { position: fixed; inset: 16px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 18px; }
+  #drop.over { border-color: var(--accent); color: var(--accent); }
+  .card { background: #0a0a0a; border: 1px solid #161616; border-radius: 8px; padding: 14px; margin-top: 16px; }
+  .card h2 { font-size: 15px; margin: 0 0 10px; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th:nth-child(1) { width: 40%; } th:nth-child(2) { width: 25%; } th:nth-child(3) { width: 35%; }
+  td, th { text-align: left; padding: 4px 6px; border-bottom: 1px solid #161616; vertical-align: top; overflow-wrap: anywhere; }
+  th { color: #888; font-weight: normal; }
+  code { color: var(--accent); }
+  input[type=text] { width: 150px; background: #000; color: #ddd; border: 1px solid #262626; border-radius: 4px; padding: 4px; }
+  input.bad { border-color: #e44; }
+  button { background: var(--accent); color: #000; border: 0; border-radius: 4px; padding: 6px 14px; cursor: pointer; }
+  button:disabled { background: #1a1a1a; color: #555; cursor: default; }
+  .convert { display: block; width: 100%; box-sizing: border-box; margin-top: 14px; padding: 10px 14px; font-size: 15px; }
+  .card > .muted, .card > .err { margin-top: 8px; }
+  .err { color: #e66; }
+  .notices { display: grid; gap: 8px; padding: 2px 0 6px; }
+  .notice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid; border-left-width: 3px; border-radius: 6px; font-size: 12.5px; line-height: 1.5; }
+  .notice.warn { background: #140f02; border-color: #3a2c08; border-left-color: #f2c14e; color: #d9c48f; }
+  .notice.info { background: #0a0d18; border-color: #1f2740; border-left-color: var(--accent); color: #b7c3e6; }
+  .notice-icon { flex: none; width: 18px; height: 18px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center; font: 700 11px/1 system-ui, sans-serif; color: #000; }
+  .notice.warn .notice-icon { background: #f2c14e; }
+  .notice.info .notice-icon { background: var(--accent); }
+  .notice-title { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .notice.warn .notice-title { color: #f2c14e; }
+  .notice.info .notice-title { color: var(--accent); }
+  .notice-quote { margin-top: 6px; padding: 6px 10px; background: #000; border-radius: 4px; font: 12px ui-monospace, Consolas, monospace; color: #e6e6e6; }
+  .muted { color: #777; }
+  details.mixer { margin-top: 10px; }
+  details.mixer summary { display: flex; align-items: center; gap: 10px; cursor: pointer; color: #aaa; list-style: none; }
+  details.mixer summary::-webkit-details-marker { display: none; }
+  details.mixer summary::before { content: "▶"; font-size: 10px; color: #777; }
+  details.mixer[open] summary::before { content: "▼"; }
+  details.mixer summary .summary-text { flex: 1; min-width: 0; }
+  details.mixer summary .reset { flex: none; padding: 4px 12px; }
+  .mixer-grid { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; overflow-x: auto; overflow-y: hidden; margin: 8px 0; padding: 6px; background: #000; border: 1px solid #161616; border-radius: 3px; scrollbar-width: thin; scrollbar-color: #2a2a2a #000; }
+  .mixer-grid > .fl-insert { flex: none; width: 250px; }
+  .mixer-grid::-webkit-scrollbar { height: 10px; }
+  .mixer-grid::-webkit-scrollbar-track { background: #000; }
+  .mixer-grid::-webkit-scrollbar-thumb { background: #2a2a2a; border: 2px solid #000; border-radius: 5px; }
+  .mixer-grid::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+  .fl-insert { background: #070707; border: 1px solid #000; border-radius: 3px; box-shadow: 0 2px 6px #000; padding-bottom: 3px; font-family: "Segoe UI", system-ui, sans-serif; }
+  .fl-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: linear-gradient(#161616, #0c0c0c); border-bottom: 1px solid #000; color: #cfcfcf; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-head .tri { color: #666; font-size: 9px; }
+  .fl-insert.changed .fl-head { box-shadow: inset 3px 0 var(--accent); }
+  .fl-info { margin: 4px 3px 3px; padding: 3px 7px; background: #000; border: 1px solid #151515; border-radius: 2px; color: #8a8a8a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-slot { display: flex; align-items: center; height: 29px; margin: 2px 3px; padding: 0 6px 0 4px; background: linear-gradient(#1b1b1b, #121212); border: 1px solid #000; border-radius: 2px; color: #e4e4e4; font-size: 14px; user-select: none; }
+  .fl-slot.empty { background: linear-gradient(#101010, #0a0a0a); color: #666; font-style: italic; }
+  .fl-slot[draggable=true] { cursor: grab; }
+  .fl-slot.dragging { opacity: .35; }
+  .fl-slot.drop { outline: 1px solid var(--accent); outline-offset: -1px; }
+  .fl-slot .arrow { width: 14px; color: #5c5c5c; font-size: 8px; font-style: normal; flex: none; }
+  .fl-slot .pname { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .fl-slot.removed .pname { text-decoration: line-through; color: #5c5c5c; }
+  .fl-slot .links { margin-left: 4px; color: var(--accent); font-size: 10px; font-style: normal; flex: none; }
+  .fl-tools { display: none; gap: 2px; margin-left: 4px; flex: none; }
+  .fl-slot:hover .fl-tools { display: flex; }
+  .fl-tools button { padding: 0 5px; line-height: 17px; font-size: 11px; font-style: normal; background: #000; color: #d0d0d0; border: 1px solid #2e2e2e; border-radius: 2px; }
+  .fl-tools button:hover:not(:disabled) { background: #1e1e1e; }
+  .fl-tools button:disabled { color: #333; border-color: #1a1a1a; background: #000; }
+  .knob { position: relative; width: 22px; height: 22px; margin-left: 6px; flex: none; border-radius: 50%; border: 2px solid #9a9a9a; background: radial-gradient(circle at 50% 35%, #1c1c1c, #000 70%); box-sizing: border-box; touch-action: none; }
+  .knob::after { content: ""; position: absolute; left: 50%; top: 2px; width: 2px; height: 7px; margin-left: -1px; background: #e4e4e4; border-radius: 1px; transform-origin: 50% 100%; transform: rotate(var(--angle)); }
+  .knob.live { cursor: ns-resize; }
+  .knob.live:hover { border-color: var(--accent); }
+  .fl-slot.empty .knob, .fl-slot.removed .knob { border-color: #3a3a3a; }
+  .fl-slot.empty .knob::after, .fl-slot.removed .knob::after { background: #4a4a4a; }
+  .led { width: 9px; height: 9px; margin-left: 7px; flex: none; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #e8ffc8, #9ed36a 60%); box-shadow: 0 0 0 2px #000, 0 0 5px #9ed36a80; }
+  .led.live { cursor: pointer; }
+  .led.off { background: #1f2a17; box-shadow: 0 0 0 2px #000; }
+</style>
+</head>
+<body>
+<div id="drop"><span>drop <b>.flp</b> or <b>.zip</b> files here, or click to choose</span><input id="pick" type="file" accept=".flp,.zip" multiple hidden></div>
+<datalist id="versions"></datalist>
+<div id="out"></div>
+
+<script>
+"use strict";
+
+const PRESETS = ["25.2.5.5319", "25.2.4.5242", "24.2.2.4597", "21.2.3.4004"];
+const VERSION_RE = /^\d+\.\d+\.\d+\.(\d+)$/;
+
+const EV = {
+  VERSION: 199,
+  BUILD: 159,
+  FORMAT: 169,
+  ODD_172: 172,
+  VERSION_TEXT: 192,
+  CH_NEW: 64,
+  CH_TYPE: 21,
+  CH_INSERT: 104,
+  CH_INSERT_LEGACY: 22,
+  NAME: 203,
+  PLUGIN_INTERNAL: 201,
+  PLUGIN_WRAPPER: 212,
+  PLUGIN_DATA: 213,
+  SLOT: 98,
+  INS_FLAGS: 236,
+  INS_ROUTING: 235,
+  INS_NAME: 204,
+  INS_OUTPUT: 147,
+  MIXER_PARAMS: 225,
+  INIT_VALUES: 216,
+  LINK_MIDI: 226,
+  LINK: 227,
+  PLAYLIST: 233,
+};
+const CH_TYPE_AUTOMATION = 5;
+const INSERT_HEAD = new Set([42, 95, 149, 204]);
+const PARAM_VOLUME = 192;
+const SLOT_DEFAULTS = { 0: 1, 1: 12800 };
+
+const FL25_FORMAT = 7;
+const FL25_ONLY = new Set([51, 52, 103, 170, 171, 172, 192, 251, 252, 253]);
+const LEGACY = { format: 5, inserts: 127, current: 126, base: 128, item_size: 60, fl25_item_size: 80 };
+const LEGACY_TRACK_PARAMS = [[192, 12800], [193, 0], [194, 0], [208, 0], [209, 0], [210, 0], [216, 5777], [217, 33145], [218, 55825], [224, 17500], [225, 17500], [226, 17500]];
+const LEGACY_ROUTE_CURRENT = 64 + LEGACY.current;
+
+const enc = new TextEncoder();
+const ascii = new TextDecoder("latin1");
+const utf8 = new TextDecoder("utf-8");
+const utf16 = new TextDecoder("utf-16le");
+
+function parse_flp(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (buf.length < 22 || ascii.decode(buf.subarray(0, 4)) !== "FLhd") throw new Error("not an flp file");
+  const data_tag = 8 + dv.getUint32(4, true);
+  if (ascii.decode(buf.subarray(data_tag, data_tag + 4)) !== "FLdt") throw new Error("fldt chunk not found");
+  const start = data_tag + 8;
+  const end = Math.min(start + dv.getUint32(data_tag + 4, true), buf.length);
+  const evs = [];
+  for (let pos = start; pos < end;) {
+    const id = buf[pos], ev_start = pos++;
+    let size;
+    if (id < 64) size = 1;
+    else if (id < 128) size = 2;
+    else if (id === EV.ODD_172) size = 3;
+    else if (id < 192) size = 4;
+    else {
+      size = 0;
+      for (let shift = 0; ; shift += 7) {
+        const b = buf[pos++];
+        size += (b & 0x7f) * 2 ** shift;
+        if (!(b & 0x80)) break;
+      }
+    }
+    evs.push({ id, start: ev_start, data: pos, end: pos + size });
+    pos += size;
+  }
+  if (!evs.length || evs[evs.length - 1].end !== end) throw new Error("event data doesn't line up with the fldt chunk");
+
+  const flp = { buf, dv, data_tag, start, end, evs, mixer: null, mixer_error: null };
+  const version_ev = evs.find(e => e.id === EV.VERSION);
+  if (!version_ev) throw new Error("version event not found");
+  flp.version = ascii.decode(body(flp, version_ev)).replace(/\0+$/, "");
+  const build_ev = evs.find(e => e.id === EV.BUILD);
+  flp.build = build_ev ? dv.getUint32(build_ev.data, true) : null;
+  const format_ev = evs.find(e => e.id === EV.FORMAT);
+  flp.format = format_ev ? dv.getUint32(format_ev.data, true) : null;
+  try { flp.mixer = parse_mixer(flp); } catch (err) { flp.mixer_error = err.message; }
+  return flp;
+}
+
+const body = (flp, e) => flp.buf.subarray(e.data, e.end);
+const text16 = (flp, e) => utf16.decode(body(flp, e)).replace(/\0+$/, "");
+const int_val = (flp, e) => e.end - e.data === 1 ? flp.buf[e.data] : e.end - e.data === 2 ? flp.dv.getUint16(e.data, true) : flp.dv.getInt32(e.data, true);
+
+function wrapper_records(bytes) {
+  const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const recs = new Map();
+  for (let pos = 4; pos + 12 <= bytes.length;) {
+    const id = dv.getUint32(pos, true), size = Number(dv.getBigUint64(pos + 4, true));
+    pos += 12;
+    if (pos + size > bytes.length) return new Map();
+    recs.set(id, bytes.subarray(pos, pos + size));
+    pos += size;
+  }
+  return recs;
+}
+
+function parse_mixer(flp) {
+  const { evs, dv } = flp;
+  const flag_idx = evs.flatMap((e, i) => e.id === EV.INS_FLAGS ? [i] : []);
+  if (!flag_idx.length) return null;
+
+  const params_ev = evs.find(e => e.id === EV.MIXER_PARAMS);
+  if (!params_ev) throw new Error("mixer params event missing");
+  const params = [];
+  for (let o = params_ev.data; o + 12 <= params_ev.end; o += 12) {
+    params.push({ off: o, id: flp.buf[o + 4], track: dv.getUint16(o + 6, true) >> 6, slot: dv.getUint16(o + 6, true) & 0x3f, value: dv.getInt32(o + 8, true) });
+  }
+  const tracks = [...new Set(params.filter(p => p.id === PARAM_VOLUME).map(p => p.track))].sort((a, b) => a - b);
+  if (tracks.length !== flag_idx.length) throw new Error(`mixer params list ${tracks.length} inserts, project has ${flag_idx.length}`);
+  const base = tracks[0];
+  const slot_params = new Map();
+  for (const p of params) {
+    if (p.id >= 64 || p.track < base) continue;
+    const key = `${p.track - base}:${p.slot}`;
+    if (!slot_params.has(key)) slot_params.set(key, {});
+    slot_params.get(key)[p.id] = p.value;
+  }
+
+  const refs = [];
+  const add_ref = (ev, at, kind, record) => {
+    const param = dv.getUint16(at - 2, true), dest = dv.getUint16(at, true);
+    if ((dest >> 6) < base) return;
+    const slot_bound = (param & 0x8000) !== 0 || (param & 0xffc0) === 0x1f00;
+    refs.push({ ev, at, kind, record, slot_bound, insert: (dest >> 6) - base, slot: dest & 0x3f });
+  };
+  for (const e of evs) {
+    if ((e.id === EV.LINK || e.id === EV.LINK_MIDI) && e.end - e.data >= 12) add_ref(e, e.data + 10, "link", null);
+    else if (e.id === EV.INIT_VALUES) {
+      for (let o = e.data; o + 12 <= e.end; o += 12) add_ref(e, o + 6, "init", o);
+    }
+  }
+
+  const channels = new Map();
+  const chan_starts = evs.flatMap((e, i) => e.id === EV.CH_NEW && i < flag_idx[0] ? [i] : []);
+  chan_starts.forEach((s, k) => {
+    let name = null, type = null, insert = 0;
+    for (let i = s; i < (chan_starts[k + 1] ?? flag_idx[0]); i++) {
+      const e = evs[i];
+      if (e.id === EV.NAME && name === null) name = text16(flp, e);
+      else if (e.id === EV.CH_TYPE) type = int_val(flp, e);
+      else if (e.id === EV.CH_INSERT) insert = int_val(flp, e);
+      else if (e.id === EV.CH_INSERT_LEGACY) insert = (flp.buf[e.data] << 24) >> 24;
+    }
+    if (type === CH_TYPE_AUTOMATION) return;
+    if (!channels.has(insert)) channels.set(insert, []);
+    channels.get(insert).push(name ?? `channel ${k + 1}`);
+  });
+
+  const inserts = flag_idx.map((fi, pos) => {
+    const real = tracks[pos] - base;
+    let head = fi;
+    while (head > 0 && INSERT_HEAD.has(evs[head - 1].id)) head--;
+    if (pos > 0 && evs[head - 1].id !== EV.INS_OUTPUT) throw new Error(`unrecognized events before insert ${real}`);
+    const name_ev = evs.slice(head, fi).find(e => e.id === EV.INS_NAME);
+    const slots = [];
+    let block_start = fi + 1, j = fi + 1;
+    for (; j < evs.length; j++) {
+      const id = evs[j].id;
+      if (id === EV.SLOT) {
+        slots.push(parse_slot(flp, block_start, j, real));
+        block_start = j + 1;
+      } else if (id === EV.INS_ROUTING || id === EV.INS_OUTPUT || id === EV.INS_FLAGS) break;
+    }
+    if (block_start !== j) throw new Error(`unrecognized events after slots of insert ${real}`);
+    const route_ev = evs[j]?.id === EV.INS_ROUTING ? evs[j] : null;
+    const routes = route_ev ? [...body(flp, route_ev)].flatMap((v, t) => v ? [t] : []) : [];
+    let tail_end = j;
+    while (tail_end < evs.length && evs[tail_end].id !== EV.INS_OUTPUT && evs[tail_end].id !== EV.INS_FLAGS) tail_end++;
+    if (evs[tail_end]?.id !== EV.INS_OUTPUT) throw new Error(`insert ${real} has no output event`);
+    const is_current = pos > 0 && pos === flag_idx.length - 1 && (flp.buf[evs[fi].data + 4] & 0x40) === 0;
+    return {
+      pos, real, is_current,
+      label: real === 0 ? "master" : is_current ? "current" : `insert ${real}`,
+      name: name_ev ? text16(flp, name_ev) : null,
+      slots, slots_from: fi + 1, slots_to: j, head, tail_end, routes,
+      channels: channels.get(real) ?? [],
+    };
+  });
+
+  for (const ins of inserts) for (const s of ins.slots) {
+    s.params = slot_params.get(`${ins.real}:${s.index}`) ?? {};
+    if (s.plugin) s.plugin.links = refs.filter(r => r.kind === "link" && r.slot_bound && r.insert === ins.real && r.slot === s.index).length;
+  }
+  return { base, inserts, params, refs, labels: new Map(inserts.map(i => [i.real, i.label])) };
+}
+
+function parse_slot(flp, from, term, real) {
+  const { evs, dv } = flp;
+  const index = int_val(flp, evs[term]);
+  const slot = { index, from, term, plugin: null };
+  if (from === term) return slot;
+  const block = evs.slice(from, term);
+  const wrapper = block.find(e => e.id === EV.PLUGIN_WRAPPER);
+  if (!wrapper) throw new Error(`insert ${real} slot ${index + 1}: no plugin header`);
+  const w_ins = dv.getUint32(wrapper.data, true), w_slot = dv.getUint32(wrapper.data + 4, true);
+  if (w_ins !== real || w_slot !== index) throw new Error(`insert ${real} slot ${index + 1}: plugin says insert ${w_ins} slot ${w_slot + 1}`);
+  const internal = block.find(e => e.id === EV.PLUGIN_INTERNAL);
+  const custom = block.find(e => e.id === EV.NAME);
+  const data = block.find(e => e.id === EV.PLUGIN_DATA);
+  const recs = data ? wrapper_records(body(flp, data)) : new Map();
+  const internal_name = internal ? text16(flp, internal) : "?";
+  const vst_name = recs.has(54) ? utf8.decode(recs.get(54)) : null;
+  slot.plugin = {
+    wrapper,
+    name: (custom && text16(flp, custom)) || vst_name || internal_name,
+    vendor: recs.has(56) ? utf8.decode(recs.get(56)) : null,
+    kind: vst_name ? "vst" : internal_name,
+  };
+  return slot;
+}
+
+function varint(n) {
+  const out = [];
+  do { let b = n & 0x7f; n >>>= 7; if (n) b |= 0x80; out.push(b); } while (n);
+  return out;
+}
+
+function concat(parts) {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return out;
+}
+
+function data_event(id, data) { return concat([Uint8Array.of(id, ...varint(data.length)), data]); }
+
+function dword_event(id, value) {
+  const b = new Uint8Array(5);
+  b[0] = id;
+  new DataView(b.buffer).setInt32(1, value, true);
+  return b;
+}
+
+function utf16le(s) {
+  const b = new Uint8Array(s.length * 2);
+  for (let i = 0; i < s.length; i++) { b[2 * i] = s.charCodeAt(i) & 0xff; b[2 * i + 1] = s.charCodeAt(i) >> 8; }
+  return b;
+}
+
+function assemble(flp, parts) {
+  const data = concat(parts);
+  const out = new Uint8Array(flp.start + data.length + (flp.buf.length - flp.end));
+  out.set(flp.buf.subarray(0, flp.start));
+  out.set(data, flp.start);
+  out.set(flp.buf.subarray(flp.end), flp.start + data.length);
+  new DataView(out.buffer).setUint32(flp.data_tag + 4, data.length, true);
+  return out;
+}
+
+function build_flp(flp, version, edits) {
+  const { buf, evs } = flp;
+  const raw = e => buf.subarray(e.start, e.end);
+  const replace = new Map();
+  const regions = new Map();
+  const build = +version.match(VERSION_RE)[1];
+
+  const version_ev = evs.find(e => e.id === EV.VERSION);
+  replace.set(version_ev, data_event(EV.VERSION, enc.encode(version + "\0")));
+  const build_ev = evs.find(e => e.id === EV.BUILD);
+  if (build_ev) replace.set(build_ev, dword_event(EV.BUILD, build));
+  const text_ev = evs.find(e => e.id === EV.VERSION_TEXT);
+  if (text_ev) replace.set(text_ev, data_event(EV.VERSION_TEXT, utf16le(`FL Studio ${version}.${build}\0`)));
+
+  const mixer = flp.mixer;
+  const changed = mixer ? [...(edits ?? new Map())].filter(([pos, ed]) => is_edited(mixer.inserts[pos], ed)) : [];
+  if (changed.length) {
+    const params_ev = evs.find(e => e.id === EV.MIXER_PARAMS);
+    const params = new Uint8Array(raw(params_ev));
+    const pdv = new DataView(params.buffer);
+    const shift = params_ev.data - params_ev.start;
+    const ref_edits = new Map();
+    const ref_edit = ev => {
+      if (!ref_edits.has(ev)) ref_edits.set(ev, { bytes: new Uint8Array(raw(ev)), all: false, drop: new Set() });
+      return ref_edits.get(ev);
+    };
+
+    for (const [pos, ed] of changed) {
+      const ins = mixer.inserts[pos];
+      const old_at = new Map(), new_of = new Map();
+      ed.layout.forEach((old, i) => { if (old !== null) { old_at.set(ins.slots[i].index, old); new_of.set(old, ins.slots[i].index); } });
+      const perm = new Map(new_of);
+      const free_new = ins.slots.map(s => s.index).filter(n => !old_at.has(n));
+      ins.slots.map(s => s.index).filter(o => !perm.has(o)).forEach((o, k) => perm.set(o, free_new[k]));
+      const slot_by_index = new Map(ins.slots.map(s => [s.index, s]));
+
+      const parts = [];
+      for (const s of ins.slots) {
+        const old = old_at.get(s.index);
+        if (old !== undefined && !ed.removed.has(old)) {
+          const src = slot_by_index.get(old);
+          for (let i = src.from; i < src.term; i++) {
+            const e = evs[i];
+            if (e === src.plugin.wrapper) {
+              const w = new Uint8Array(raw(e));
+              new DataView(w.buffer).setUint32(e.data - e.start + 4, s.index, true);
+              parts.push(w);
+            } else parts.push(raw(e));
+          }
+        }
+        parts.push(raw(evs[s.term]));
+      }
+      regions.set(ins.slots_from, { to: ins.slots_to, parts });
+
+      for (const p of mixer.params) {
+        if (p.id >= 64 || p.track - mixer.base !== ins.real || !perm.has(p.slot)) continue;
+        const at = p.off - params_ev.data + shift;
+        const cd = pdv.getUint16(at + 6, true);
+        pdv.setUint16(at + 6, (cd & ~0x3f) | perm.get(p.slot), true);
+        if (ed.removed.has(p.slot)) {
+          if (p.id in SLOT_DEFAULTS) pdv.setInt32(at + 8, SLOT_DEFAULTS[p.id], true);
+        } else if (ed.params.get(p.slot)?.[p.id] !== undefined) {
+          pdv.setInt32(at + 8, ed.params.get(p.slot)[p.id], true);
+        }
+      }
+
+      for (const r of mixer.refs) {
+        if (!r.slot_bound || r.insert !== ins.real || !perm.has(r.slot)) continue;
+        const re = ref_edit(r.ev);
+        if (ed.removed.has(r.slot)) {
+          if (r.record === null) re.all = true; else re.drop.add(r.record);
+          continue;
+        }
+        const bdv = new DataView(re.bytes.buffer), at = r.at - r.ev.start;
+        bdv.setUint16(at, (bdv.getUint16(at, true) & ~0x3f) | perm.get(r.slot), true);
+      }
+    }
+    replace.set(params_ev, params);
+    for (const [ev, re] of ref_edits) {
+      if (re.all) { replace.set(ev, null); continue; }
+      if (!re.drop.size) { replace.set(ev, re.bytes); continue; }
+      const kept = [];
+      for (let o = ev.data; o + 12 <= ev.end; o += 12) {
+        if (!re.drop.has(o)) kept.push(re.bytes.subarray(o - ev.start, o - ev.start + 12));
+      }
+      replace.set(ev, data_event(ev.id, concat(kept)));
+    }
+  }
+
+  const parts = [];
+  for (let i = 0; i < evs.length;) {
+    const region = regions.get(i);
+    if (region) { parts.push(...region.parts); i = region.to; continue; }
+    const r = replace.get(evs[i]);
+    if (r !== null) parts.push(r ?? raw(evs[i]));
+    i++;
+  }
+  return assemble(flp, parts);
+}
+
+function param_record(id, track, slot, value) {
+  const b = new Uint8Array(12), dv = new DataView(b.buffer);
+  b[4] = id;
+  b[5] = 31;
+  dv.setUint16(6, ((track + LEGACY.base) << 6) | slot, true);
+  dv.setInt32(8, value, true);
+  return b;
+}
+
+function legacy_empty_insert() {
+  const routing = new Uint8Array(LEGACY.inserts);
+  routing[0] = 1;
+  return concat([
+    Uint8Array.of(42, 0),
+    data_event(EV.INS_FLAGS, Uint8Array.of(0, 0, 0, 0, 0x4c, 0, 0, 0, 0, 0, 0, 0)),
+    ...Array.from({ length: 10 }, (_, k) => Uint8Array.of(EV.SLOT, k, 0)),
+    data_event(EV.INS_ROUTING, routing),
+    dword_event(165, 3), dword_event(166, 1), Uint8Array.of(49, 0), dword_event(154, -1), dword_event(EV.INS_OUTPUT, -1),
+  ]);
+}
+
+function to_legacy(flp) {
+  const { buf, evs, dv, mixer } = flp;
+  if (flp.format !== FL25_FORMAT) throw new Error(`expected an fl 25 project (format ${FL25_FORMAT}), this one is format ${flp.format}`);
+  if (!mixer) throw new Error(`can't convert the mixer: ${flp.mixer_error ?? "no mixer data"}`);
+  const raw = e => buf.subarray(e.start, e.end);
+  const current = mixer.inserts.find(i => i.is_current);
+  if (!current) throw new Error("mixer has no 'current' insert");
+  const normal = new Map();
+  for (const ins of mixer.inserts) {
+    if (ins.is_current) continue;
+    if (ins.real >= LEGACY.current) throw new Error(`${ins.label} doesn't exist in fl 24 (it has inserts 1-125)`);
+    normal.set(ins.real, ins);
+  }
+  const legacy_track = real => {
+    if (real === current.real) return LEGACY.current;
+    if (real < LEGACY.current) return real;
+    throw new Error(`mixer track ${real} doesn't exist in fl 24`);
+  };
+  const retarget = (bytes, at) => {
+    const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const cd = v.getUint16(at, true);
+    v.setUint16(at, ((legacy_track((cd >> 6) - mixer.base) + LEGACY.base) << 6) | (cd & 0x3f), true);
+  };
+  const refs_by_ev = new Map();
+  for (const r of mixer.refs) {
+    if (!refs_by_ev.has(r.ev)) refs_by_ev.set(r.ev, []);
+    refs_by_ev.get(r.ev).push(r);
+  }
+
+  const empty_insert = legacy_empty_insert();
+  const insert_parts = () => {
+    const parts = [];
+    const emit = ins => {
+      for (let i = ins.head; i <= ins.tail_end; i++) {
+        const e = evs[i];
+        if (FL25_ONLY.has(e.id)) continue;
+        if (e.id === EV.INS_ROUTING) {
+          const src = body(flp, e);
+          if (src.subarray(LEGACY.inserts).some(Boolean)) throw new Error(`${ins.label} routes to an insert fl 24 doesn't have`);
+          const routing = new Uint8Array(LEGACY.inserts);
+          routing.set(src.subarray(0, LEGACY.inserts));
+          parts.push(data_event(EV.INS_ROUTING, routing));
+        } else if (e.id === EV.PLUGIN_WRAPPER && ins.is_current) {
+          const w = new Uint8Array(raw(e));
+          new DataView(w.buffer).setUint32(e.data - e.start, LEGACY.current, true);
+          parts.push(w);
+        } else parts.push(raw(e));
+      }
+    };
+    for (let k = 0; k < LEGACY.current; k++) {
+      if (normal.has(k)) emit(normal.get(k)); else parts.push(empty_insert);
+    }
+    emit(current);
+    return parts;
+  };
+
+  const legacy_params = () => {
+    const head = [], by_track = new Map();
+    for (const p of mixer.params) {
+      const rec = new Uint8Array(buf.subarray(p.off, p.off + 12));
+      if (p.track < mixer.base) { head.push(rec); continue; }
+      const t = legacy_track(p.track - mixer.base);
+      retarget(rec, 6);
+      if (!by_track.has(t)) by_track.set(t, []);
+      by_track.get(t).push(rec);
+    }
+    const out = [...head];
+    for (let t = 0; t < LEGACY.inserts; t++) {
+      const recs = by_track.get(t) ?? [
+        ...Array.from({ length: 10 }, (_, s) => [param_record(0, t, s, SLOT_DEFAULTS[0]), param_record(1, t, s, SLOT_DEFAULTS[1])]).flat(),
+        ...LEGACY_TRACK_PARAMS.map(([id, value]) => param_record(id, t, 0, value)),
+      ];
+      out.push(...recs);
+      if (!recs.some(r => r[4] === LEGACY_ROUTE_CURRENT)) out.push(param_record(LEGACY_ROUTE_CURRENT, t, 0, 0));
+    }
+    return data_event(EV.MIXER_PARAMS, concat(out));
+  };
+
+  const legacy_playlist = e => {
+    const src = body(flp, e);
+    if (src.length % LEGACY.fl25_item_size) throw new Error("unexpected playlist item size");
+    const n = src.length / LEGACY.fl25_item_size;
+    const out = new Uint8Array(n * LEGACY.item_size), odv = new DataView(out.buffer);
+    for (let k = 0; k < n; k++) {
+      const o = k * LEGACY.item_size;
+      out.set(src.subarray(k * LEGACY.fl25_item_size, k * LEGACY.fl25_item_size + LEGACY.item_size), o);
+      out[o + 18] |= 0x40;
+      if (odv.getUint32(o + 56, true) > 3) odv.setUint32(o + 56, 0, true);
+    }
+    return data_event(EV.PLAYLIST, out);
+  };
+
+  const first = mixer.inserts[0].head, last = mixer.inserts[mixer.inserts.length - 1].tail_end;
+  const parts = [];
+  for (let i = 0; i < evs.length; i++) {
+    if (i === first) { parts.push(...insert_parts()); i = last; continue; }
+    const e = evs[i];
+    if (FL25_ONLY.has(e.id)) continue;
+    if (e.id === EV.FORMAT) parts.push(dword_event(EV.FORMAT, LEGACY.format));
+    else if (e.id === EV.CH_INSERT) {
+      const v = dv.getInt16(e.data, true);
+      if (v >= LEGACY.current) throw new Error(`a channel is routed to insert ${v}, fl 24 has inserts 1-125`);
+      parts.push(Uint8Array.of(EV.CH_INSERT_LEGACY, v & 0xff));
+    }
+    else if (e.id === EV.PLAYLIST) parts.push(legacy_playlist(e));
+    else if (e.id === EV.MIXER_PARAMS) parts.push(legacy_params());
+    else if (refs_by_ev.has(e)) {
+      const b = new Uint8Array(raw(e));
+      for (const r of refs_by_ev.get(e)) retarget(b, r.at - e.start);
+      parts.push(b);
+    }
+    else parts.push(raw(e));
+  }
+
+  const out = assemble(flp, parts);
+  const check = parse_flp(out);
+  if (!check.mixer || check.mixer.inserts.length !== LEGACY.inserts || check.mixer.base !== LEGACY.base) {
+    throw new Error(`fl 24 conversion self-check failed: ${check.mixer_error ?? "unexpected mixer layout"}`);
+  }
+  return out;
+}
+
+const major = v => parseInt(v, 10);
+const needs_legacy = (flp, target) => flp.format === FL25_FORMAT && major(target) < 25;
+
+function convert_project(flp, target, edits) {
+  const out = build_flp(flp, target, edits);
+  return needs_legacy(flp, target) ? to_legacy(parse_flp(out)) : out;
+}
+
+const initial_layout = ins => ins.slots.map(s => s.plugin ? s.index : null);
+const fresh_edit = ins => ({ layout: initial_layout(ins), removed: new Set(), params: new Map() });
+
+function is_edited(ins, ed) {
+  const initial = initial_layout(ins);
+  return ed.removed.size > 0 || ed.params.size > 0 || ed.layout.some((old, i) => old !== initial[i]);
+}
+
+const CRC_TABLE = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    t[n] = c;
+  }
+  return t;
+})();
+
+function crc32(buf) {
+  let c = 0xffffffff;
+  for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xff] ^ (c >>> 8);
+  return (c ^ 0xffffffff) >>> 0;
+}
+
+async function pipe(bytes, stream) {
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+
+function parse_zip(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 22 - 0xffff); i--) {
+    if (dv.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error("not a zip file");
+  const count = dv.getUint16(eocd + 10, true);
+  let p = dv.getUint32(eocd + 16, true);
+  if (count === 0xffff || p === 0xffffffff) throw new Error("zip64 archives are not supported");
+  const entries = [];
+  for (let i = 0; i < count; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) throw new Error("corrupt central directory");
+    const name_len = dv.getUint16(p + 28, true);
+    const cen_len = 46 + name_len + dv.getUint16(p + 30, true) + dv.getUint16(p + 32, true);
+    const flags = dv.getUint16(p + 8, true);
+    const lho = dv.getUint32(p + 42, true);
+    const local_name_end = lho + 30 + dv.getUint16(lho + 26, true);
+    const data_at = local_name_end + dv.getUint16(lho + 28, true);
+    const csize = dv.getUint32(p + 20, true);
+    entries.push({
+      cen: buf.subarray(p, p + cen_len),
+      name: (flags & 0x800 ? utf8 : ascii).decode(buf.subarray(p + 46, p + 46 + name_len)),
+      flags,
+      method: dv.getUint16(p + 10, true),
+      crc: dv.getUint32(p + 16, true),
+      csize,
+      usize: dv.getUint32(p + 24, true),
+      local_extra: buf.subarray(local_name_end, data_at),
+      raw: buf.subarray(data_at, data_at + csize),
+    });
+    p += cen_len;
+  }
+  return { entries, eocd: buf.subarray(eocd) };
+}
+
+async function unzip_entry(e) {
+  if (e.flags & 1) throw new Error("encrypted entry");
+  if (e.method === 0) return e.raw;
+  if (e.method === 8) return pipe(e.raw, new DecompressionStream("deflate-raw"));
+  throw new Error("unsupported compression method " + e.method);
+}
+
+async function build_zip(zip, replacements) {
+  const parts = [], central = [];
+  let offset = 0;
+  for (const e of zip.entries) {
+    let { raw, method, crc, csize, usize } = e;
+    const repl = replacements.get(e);
+    if (repl) {
+      raw = await pipe(repl, new CompressionStream("deflate-raw"));
+      method = 8; crc = crc32(repl); csize = raw.length; usize = repl.length;
+    }
+    const flags = e.flags & ~0x0008;
+    const cen = new Uint8Array(e.cen);
+    const cdv = new DataView(cen.buffer);
+    const name_bytes = cen.subarray(46, 46 + cdv.getUint16(28, true));
+    const local = new Uint8Array(30 + name_bytes.length + e.local_extra.length);
+    const ldv = new DataView(local.buffer);
+    ldv.setUint32(0, 0x04034b50, true);
+    ldv.setUint16(4, cdv.getUint16(6, true), true);
+    ldv.setUint16(6, flags, true);
+    ldv.setUint16(8, method, true);
+    ldv.setUint16(10, cdv.getUint16(12, true), true);
+    ldv.setUint16(12, cdv.getUint16(14, true), true);
+    ldv.setUint32(14, crc, true);
+    ldv.setUint32(18, csize, true);
+    ldv.setUint32(22, usize, true);
+    ldv.setUint16(26, name_bytes.length, true);
+    ldv.setUint16(28, e.local_extra.length, true);
+    local.set(name_bytes, 30);
+    local.set(e.local_extra, 30 + name_bytes.length);
+
+    cdv.setUint16(8, flags, true);
+    cdv.setUint16(10, method, true);
+    cdv.setUint32(16, crc, true);
+    cdv.setUint32(20, csize, true);
+    cdv.setUint32(24, usize, true);
+    cdv.setUint32(42, offset, true);
+    central.push(cen);
+    parts.push(local, raw);
+    offset += local.length + raw.length;
+  }
+  const cd_size = central.reduce((n, c) => n + c.length, 0);
+  const eocd = new Uint8Array(zip.eocd);
+  const edv = new DataView(eocd.buffer);
+  edv.setUint32(12, cd_size, true);
+  edv.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, eocd], { type: "application/zip" });
+}
+
+const $out = document.getElementById("out");
+const $drop = document.getElementById("drop");
+const $pick = document.getElementById("pick");
+
+function refresh_presets() {
+  const saved = JSON.parse(localStorage.getItem("flpVersions") || "[]");
+  const all = [...new Set([...PRESETS, ...saved])].sort((a, b) => b.localeCompare(a, undefined, { numeric: true }));
+  document.getElementById("versions").replaceChildren(...all.map(v => Object.assign(document.createElement("option"), { value: v })));
+}
+function remember_version(v) {
+  const saved = new Set(JSON.parse(localStorage.getItem("flpVersions") || "[]"));
+  if (PRESETS.includes(v) || saved.has(v)) return;
+  saved.add(v);
+  localStorage.setItem("flpVersions", JSON.stringify([...saved]));
+  refresh_presets();
+}
+
+function el(tag, props = {}, ...kids) {
+  const n = Object.assign(document.createElement(tag), props);
+  n.append(...kids);
+  return n;
+}
+
+function download(blob, name) {
+  const a = el("a", { href: URL.createObjectURL(blob), download: name });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
+function suffixed(name, version) {
+  const dot = name.lastIndexOf(".");
+  return dot > 0 ? `${name.slice(0, dot)}_${version}${name.slice(dot)}` : `${name}_${version}`;
+}
+
+function notice(kind, icon, title, ...body) {
+  return el("div", { className: `notice ${kind}` },
+    el("span", { className: "notice-icon", textContent: icon }),
+    el("div", {}, el("div", { className: "notice-title", textContent: title }), ...body));
+}
+
+function downgrade_notices(flp, target) {
+  if (!VERSION_RE.test(target)) return [];
+  const from = major(flp.version), to = major(target);
+  const crash = (a, b) => notice("warn", "!", `downgrading fl ${a} → fl ${b}`,
+    el("div", { textContent: "fl studio may refuse to open the project and show:" }),
+    el("div", { className: "notice-quote", textContent: "This project contains invalid data and may cause the program to crash" }));
+  if (!needs_legacy(flp, target)) return to < from ? [crash(from, to)] : [];
+  const convert = notice("info", "i", "converting to the fl 24 format",
+    el("div", { textContent: "fixed 127-insert mixer and fl 24 playlist clips" }),
+    el("div", { textContent: "fl 25-only data (new channel, pattern and playlist-clip settings) is dropped" }));
+  return to < 24 ? [convert, crash(24, to)] : [convert];
+}
+
+const MIX_MAX = SLOT_DEFAULTS[1];
+const clamp_mix = v => Math.round(Math.min(Math.max(v, 0), MIX_MAX));
+const mix_pct = v => Math.round(v / MIX_MAX * 100);
+const knob_angle = v => -135 + 270 * v / MIX_MAX;
+
+function render_mixer(item) {
+  const { mixer, mixer_error } = item.flp;
+  if (!mixer) return el("div", { className: "muted", textContent: mixer_error ? `mixer editing unavailable: ${mixer_error}` : "no mixer data found" });
+  const reset_edits = () => { item.edits = new Map(mixer.inserts.map(ins => [ins.pos, fresh_edit(ins)])); };
+  reset_edits();
+  const is_used = ins => ins.real === 0 || ins.slots.some(s => s.plugin) || ins.channels.length || ins.name;
+  const used = mixer.inserts.filter(is_used);
+  const plugin_count = mixer.inserts.reduce((n, i) => n + i.slots.filter(s => s.plugin).length, 0);
+  const grid = el("div", { className: "mixer-grid" });
+  const summary_text = el("span", { className: "summary-text" });
+  const reset = el("button", { textContent: "reset mixer changes", className: "reset" });
+  const details = el("details", { className: "mixer", open: true }, el("summary", {}, summary_text, reset), grid);
+  const route_text = ins => ins.routes.length ? "→ " + ins.routes.map(t => mixer.labels.get(t) ?? `insert ${t}`).join(", ") : "→ (not routed)";
+  let drag = null;
+  let last_knob_click = null;
+
+  function draw() {
+    const changed = used.filter(ins => is_edited(ins, item.edits.get(ins.pos))).length;
+    summary_text.textContent = `mixer — ${used.length} used inserts, ${plugin_count} plugins` + (changed ? ` (${changed} insert(s) changed)` : "");
+    reset.disabled = changed === 0;
+    grid.replaceChildren(...used.map(insert_view));
+  }
+
+  function swap(ed, a, b) {
+    [ed.layout[a], ed.layout[b]] = [ed.layout[b], ed.layout[a]];
+    draw();
+  }
+
+  function insert_view(ins) {
+    const ed = item.edits.get(ins.pos);
+    const by_index = new Map(ins.slots.map(s => [s.index, s]));
+    const title = `mixer - ${ins.label}${ins.name ? ` - ${ins.name}` : ""}`;
+    const info = [ins.real === 0 ? null : route_text(ins), ins.channels.length ? `channels: ${ins.channels.join(", ")}` : null].filter(Boolean).join(" · ");
+    const panel = el("div", { className: "fl-insert" + (is_edited(ins, ed) ? " changed" : "") },
+      el("div", { className: "fl-head", title }, el("span", { className: "tri", textContent: "▶" }), title));
+    if (info) panel.append(el("div", { className: "fl-info", textContent: info, title: info }));
+    ed.layout.forEach((old, i) => panel.append(slot_view(ins, ed, by_index, old, i)));
+    return panel;
+  }
+
+  function slot_view(ins, ed, by_index, old, i) {
+    const slot = ins.slots[i];
+    const src = old === null ? null : by_index.get(old);
+    const p = src?.plugin;
+    const removed = Boolean(p) && ed.removed.has(old);
+    const live = Boolean(p) && !removed;
+    const params = p ? { ...src.params, ...ed.params.get(old) } : slot.plugin ? {} : slot.params;
+    const mix = params[1] ?? MIX_MAX, enabled = (params[0] ?? SLOT_DEFAULTS[0]) !== 0;
+    const set_param = (id, value) => {
+      const o = { ...ed.params.get(old) };
+      if (value === (src.params[id] ?? SLOT_DEFAULTS[id])) delete o[id]; else o[id] = value;
+      if (Object.keys(o).length) ed.params.set(old, o); else ed.params.delete(old);
+      draw();
+    };
+    const tip = p
+      ? [p.name, [p.vendor, p.kind].filter(Boolean).join(" · "), `slot ${slot.index + 1} · mix ${mix_pct(mix)}%${enabled ? "" : " · disabled"}`,
+         p.links ? `${p.links} automation link${p.links > 1 ? "s" : ""}${removed ? " (will be removed)" : ""}` : null].filter(Boolean).join("\n")
+      : `slot ${slot.index + 1} (empty)`;
+    const row = el("div", { className: "fl-slot" + (p ? "" : " empty") + (removed ? " removed" : ""), title: tip },
+      el("span", { className: "arrow", textContent: "▶" }),
+      el("span", { className: "pname", textContent: p ? p.name : `slot ${slot.index + 1}` }));
+    if (p?.links) row.append(el("span", { className: "links", textContent: `⟲${p.links}` }));
+    if (p) {
+      row.append(el("span", { className: "fl-tools" },
+        el("button", { textContent: "▲", title: "move up", disabled: i === 0, onclick: () => swap(ed, i, i - 1) }),
+        el("button", { textContent: "▼", title: "move down", disabled: i === ed.layout.length - 1, onclick: () => swap(ed, i, i + 1) }),
+        el("button", { textContent: removed ? "↺" : "✕", title: removed ? "restore plugin" : "remove plugin",
+          onclick: () => { if (removed) ed.removed.delete(old); else ed.removed.add(old); draw(); } })));
+      row.draggable = true;
+      row.ondragstart = e => {
+        drag = { pos: ins.pos, from: i };
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", p.name);
+        row.classList.add("dragging");
+      };
+      row.ondragend = () => { if (drag) { drag = null; draw(); } };
+    }
+
+    const knob = el("span", { className: "knob" + (live ? " live" : "") });
+    knob.style.setProperty("--angle", `${knob_angle(mix)}deg`);
+    const led = el("span", { className: "led" + (enabled ? "" : " off") + (live ? " live" : "") });
+    if (live) {
+      knob.title = `mix ${mix_pct(mix)}% — drag up/down (shift = fine), wheel, double-click = 100%`;
+      knob.onpointerdown = e => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        row.draggable = false;
+        knob.setPointerCapture(e.pointerId);
+        const start_y = e.clientY;
+        let value = mix;
+        knob.onpointermove = ev => {
+          value = clamp_mix(mix + (start_y - ev.clientY) * (ev.shiftKey ? 16 : 64));
+          knob.style.setProperty("--angle", `${knob_angle(value)}deg`);
+          knob.title = `mix ${mix_pct(value)}%`;
+        };
+        knob.onpointerup = knob.onpointercancel = () => {
+          knob.onpointermove = knob.onpointerup = knob.onpointercancel = null;
+          row.draggable = true;
+          if (value !== mix) { last_knob_click = null; set_param(1, value); return; }
+          const key = `${ins.pos}:${old}`, now = performance.now();
+          if (last_knob_click?.key === key && now - last_knob_click.time < 350) { last_knob_click = null; set_param(1, MIX_MAX); }
+          else last_knob_click = { key, time: now };
+        };
+      };
+      knob.onwheel = e => { e.preventDefault(); set_param(1, clamp_mix(mix - Math.sign(e.deltaY) * (e.shiftKey ? 64 : 256))); };
+      led.title = enabled ? "enabled — click to disable" : "disabled — click to enable";
+      led.onpointerdown = e => e.stopPropagation();
+      led.onclick = e => { e.stopPropagation(); set_param(0, enabled ? 0 : 1); };
+    }
+    row.append(knob, led);
+
+    row.ondragover = e => {
+      if (drag?.pos !== ins.pos || drag.from === i) return;
+      e.preventDefault();
+      row.classList.add("drop");
+    };
+    row.ondragleave = () => row.classList.remove("drop");
+    row.ondrop = e => {
+      e.preventDefault();
+      if (drag?.pos !== ins.pos) return;
+      const from = drag.from;
+      drag = null;
+      swap(ed, from, i);
+    };
+    return row;
+  }
+
+  reset.onclick = e => { e.preventDefault(); reset_edits(); draw(); };
+  draw();
+  return details;
+}
+
+async function handle_file(file) {
+  const card = el("div", { className: "card" }, el("h2", { textContent: file.name }));
+  $out.prepend(card);
+  try {
+    const buf = new Uint8Array(await file.arrayBuffer());
+    const is_zip = buf[0] === 0x50 && buf[1] === 0x4b;
+    const items = [];
+    let zip = null;
+    if (is_zip) {
+      zip = parse_zip(buf);
+      for (const entry of zip.entries) {
+        if (!/\.flp$/i.test(entry.name) || /(^|\/)(__MACOSX\/|\._)/.test(entry.name)) continue;
+        try { items.push({ label: entry.name, entry, flp: parse_flp(await unzip_entry(entry)) }); }
+        catch (err) { items.push({ label: entry.name, error: err.message }); }
+      }
+      if (!items.length) throw new Error("no .flp files inside the zip");
+    } else {
+      items.push({ label: file.name, flp: parse_flp(buf) });
+    }
+
+    const btn = el("button", { textContent: "convert & download", className: "convert" });
+    const status = el("div", { className: "muted" });
+    const valid = items.filter(i => i.flp);
+    const update = () => { btn.disabled = !valid.every(i => VERSION_RE.test(i.input.value.trim())); };
+
+    const rows = items.flatMap(item => {
+      if (item.error) return [el("tr", {}, el("td", { textContent: item.label }), el("td", { className: "err", colSpan: 2, textContent: item.error }))];
+      const { version, build } = item.flp;
+      const mismatch = build !== null && !version.endsWith("." + build);
+      const notices = el("div", { className: "notices" });
+      const notice_row = el("tr", { hidden: true }, el("td", { colSpan: 3 }, notices));
+      item.input = el("input", { type: "text", value: version, placeholder: "25.2.4.5242" });
+      item.input.setAttribute("list", "versions");
+      item.input.oninput = () => {
+        const v = item.input.value.trim();
+        item.input.classList.toggle("bad", !VERSION_RE.test(v));
+        notices.replaceChildren(...downgrade_notices(item.flp, v));
+        notice_row.hidden = !notices.childElementCount;
+        update();
+      };
+      return [
+        el("tr", {},
+          el("td", { textContent: item.label }),
+          el("td", {}, el("code", { textContent: version }),
+            mismatch ? el("span", { className: "muted", textContent: ` (build field: ${build})` }) : ""),
+          el("td", {}, item.input)),
+        notice_row,
+        el("tr", {}, el("td", { colSpan: 3 }, render_mixer(item))),
+      ];
+    });
+    card.append(el("table", {}, el("tr", {}, el("th", { textContent: "project" }), el("th", { textContent: "current version" }), el("th", { textContent: "target version" })), ...rows), btn, status);
+    update();
+    for (const i of valid) { i.saved_sig = unsaved_signature(i); loaded_items.push(i); }
+
+    btn.onclick = async () => {
+      btn.disabled = true;
+      status.className = "muted";
+      status.textContent = "building…";
+      try {
+        const targets = valid.map(i => i.input.value.trim());
+        targets.forEach(remember_version);
+        const tag = new Set(targets).size === 1 ? targets[0] : "converted";
+        if (zip) {
+          const repl = new Map(valid.map((i, k) => [i.entry, convert_project(i.flp, targets[k], i.edits)]));
+          download(await build_zip(zip, repl), suffixed(file.name, tag));
+        } else {
+          download(new Blob([convert_project(valid[0].flp, targets[0], valid[0].edits)]), suffixed(file.name, tag));
+        }
+        status.textContent = "downloaded";
+        for (const i of valid) i.saved_sig = unsaved_signature(i);
+      } catch (err) {
+        status.className = "err";
+        status.textContent = err.message;
+      }
+      update();
+    };
+  } catch (err) {
+    card.append(el("div", { className: "err", textContent: err.message }));
+  }
+}
+
+const loaded_items = [];
+
+function unsaved_signature(item) {
+  const parts = [item.input.value.trim()];
+  if (item.edits) {
+    for (const ins of item.flp.mixer.inserts) {
+      const ed = item.edits.get(ins.pos);
+      if (is_edited(ins, ed)) parts.push(JSON.stringify([ins.pos, ed.layout, [...ed.removed].sort((a, b) => a - b), [...ed.params].sort((a, b) => a[0] - b[0])]));
+    }
+  }
+  return parts.join("|");
+}
+
+window.addEventListener("beforeunload", e => {
+  if (!loaded_items.some(i => unsaved_signature(i) !== i.saved_sig)) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+function handle_files(files) { for (const f of files) handle_file(f); }
+
+$drop.onclick = () => $pick.click();
+$pick.onchange = () => { handle_files($pick.files); $pick.value = ""; };
+$drop.ondragover = e => { e.preventDefault(); $drop.classList.add("over"); };
+$drop.ondragleave = () => $drop.classList.remove("over");
+$drop.ondrop = e => { e.preventDefault(); $drop.classList.remove("over"); handle_files(e.dataTransfer.files); };
+document.ondragover = e => e.preventDefault();
+document.ondrop = e => e.preventDefault();
+refresh_presets();
+</script>
+</body>
+</html>
