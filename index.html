@@ -5,11 +5,13 @@
 <title>fltools</title>
 <style>
   :root { --accent: #AABFFF; }
-  body { font: 14px system-ui, sans-serif; background: #000; color: #ddd; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+  body { font: 14px system-ui, sans-serif; background: #000; color: #ddd; max-width: 1840px; margin: 40px auto; padding: 0 16px; }
   #drop { border: 2px dashed #262626; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; color: #999; background: #050505; }
   body:has(#out:empty) #drop { position: fixed; inset: 16px; display: flex; align-items: center; justify-content: center; padding: 0; font-size: 18px; }
   #drop.over { border-color: var(--accent); color: var(--accent); }
-  .card { background: #0a0a0a; border: 1px solid #161616; border-radius: 8px; padding: 14px; margin-top: 16px; }
+  .project { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  .project > .card:only-child { grid-column: 1 / -1; }
+  .card { min-width: 0; background: #0a0a0a; border: 1px solid #161616; border-radius: 8px; padding: 14px; }
   .card h2 { font-size: 15px; margin: 0 0 10px; word-break: break-all; }
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th:nth-child(1) { width: 40%; } th:nth-child(2) { width: 25%; } th:nth-child(3) { width: 35%; }
@@ -34,6 +36,25 @@
   .notice.warn .notice-title { color: #f2c14e; }
   .notice.info .notice-title { color: var(--accent); }
   .notice-quote { margin-top: 6px; padding: 6px 10px; background: #000; border-radius: 4px; font: 12px ui-monospace, Consolas, monospace; color: #e6e6e6; }
+  .ghost { background: #000; color: #ccc; border: 1px solid #262626; padding: 3px 10px; font-size: 12px; }
+  .ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .ghost:disabled { background: #000; color: #444; border-color: #161616; }
+  .sounds-panel { contain: size; display: flex; flex-direction: column; background: #0a0a0a; border: 1px solid #161616; border-radius: 8px; overflow: hidden; }
+  @media (max-width: 1300px) {
+    .project { grid-template-columns: minmax(0, 1fr); }
+    .sounds-panel { contain: none; height: 480px; }
+  }
+  .sounds-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #161616; }
+  .sounds-title { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sounds-title .muted { font-weight: normal; margin-left: 6px; }
+  .sounds-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 10px; scrollbar-width: thin; scrollbar-color: #2a2a2a #0a0a0a; }
+  .sounds-group { margin: 12px 0 2px; font-size: 12px; color: #777; }
+  .sounds-empty { padding: 12px 0; }
+  .sound { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid #141414; }
+  .sound:last-child { border-bottom: 0; }
+  .sound-main { flex: 1; min-width: 0; }
+  .sound-path { font: 12.5px/1.45 ui-monospace, Consolas, monospace; color: #9a9a9a; overflow-wrap: anywhere; user-select: text; }
+  .sound-path .file { color: var(--accent); }
   .muted { color: #777; }
   details.mixer { margin-top: 10px; }
   details.mixer summary { display: flex; align-items: center; gap: 10px; cursor: pointer; color: #aaa; list-style: none; }
@@ -43,26 +64,27 @@
   details.mixer summary .summary-text { flex: 1; min-width: 0; }
   details.mixer summary .reset { flex: none; padding: 4px 12px; }
   .mixer-grid { display: flex; flex-direction: row; align-items: flex-start; gap: 10px; overflow-x: auto; overflow-y: hidden; margin: 8px 0; padding: 6px; background: #000; border: 1px solid #161616; border-radius: 3px; scrollbar-width: thin; scrollbar-color: #2a2a2a #000; }
-  .mixer-grid > .fl-insert { flex: none; width: 250px; }
+  .mixer-grid > .fl-insert { flex: none; width: max-content; min-width: 250px; }
   .mixer-grid::-webkit-scrollbar { height: 10px; }
   .mixer-grid::-webkit-scrollbar-track { background: #000; }
   .mixer-grid::-webkit-scrollbar-thumb { background: #2a2a2a; border: 2px solid #000; border-radius: 5px; }
   .mixer-grid::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
   .fl-insert { background: #070707; border: 1px solid #000; border-radius: 3px; box-shadow: 0 2px 6px #000; padding-bottom: 3px; font-family: "Segoe UI", system-ui, sans-serif; }
-  .fl-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: linear-gradient(#161616, #0c0c0c); border-bottom: 1px solid #000; color: #cfcfcf; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fl-head { display: flex; align-items: center; gap: 6px; padding: 5px 8px; background: linear-gradient(#161616, #0c0c0c); border-bottom: 1px solid #000; color: #cfcfcf; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; contain: inline-size; }
   .fl-head .tri { color: #666; font-size: 9px; }
   .fl-insert.changed .fl-head { box-shadow: inset 3px 0 var(--accent); }
-  .fl-info { margin: 4px 3px 3px; padding: 3px 7px; background: #000; border: 1px solid #151515; border-radius: 2px; color: #8a8a8a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .fl-slot { display: flex; align-items: center; height: 29px; margin: 2px 3px; padding: 0 6px 0 4px; background: linear-gradient(#1b1b1b, #121212); border: 1px solid #000; border-radius: 2px; color: #e4e4e4; font-size: 14px; user-select: none; }
+  .fl-info { margin: 4px 3px 3px; padding: 3px 7px; background: #000; border: 1px solid #151515; border-radius: 2px; color: #8a8a8a; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; contain: inline-size; }
+  .fl-slot { position: relative; display: flex; align-items: center; height: 29px; margin: 2px 3px; padding: 0 6px 0 4px; background: linear-gradient(#1b1b1b, #121212); border: 1px solid #000; border-radius: 2px; color: #e4e4e4; font-size: 14px; user-select: none; }
   .fl-slot.empty { background: linear-gradient(#101010, #0a0a0a); color: #666; font-style: italic; }
   .fl-slot[draggable=true] { cursor: grab; }
   .fl-slot.dragging { opacity: .35; }
   .fl-slot.drop { outline: 1px solid var(--accent); outline-offset: -1px; }
   .fl-slot .arrow { width: 14px; color: #5c5c5c; font-size: 8px; font-style: normal; flex: none; }
-  .fl-slot .pname { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .fl-slot .pname { flex: 1; min-width: 0; padding-right: 8px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .fl-slot .vendor { color: #6f6f6f; font-size: 12px; }
   .fl-slot.removed .pname { text-decoration: line-through; color: #5c5c5c; }
   .fl-slot .links { margin-left: 4px; color: var(--accent); font-size: 10px; font-style: normal; flex: none; }
-  .fl-tools { display: none; gap: 2px; margin-left: 4px; flex: none; }
+  .fl-tools { display: none; gap: 2px; position: absolute; right: 52px; top: 50%; transform: translateY(-50%); padding: 3px 4px; background: #121212; border-radius: 3px; box-shadow: -8px 0 8px #121212; }
   .fl-slot:hover .fl-tools { display: flex; }
   .fl-tools button { padding: 0 5px; line-height: 17px; font-size: 11px; font-style: normal; background: #000; color: #d0d0d0; border: 1px solid #2e2e2e; border-radius: 2px; }
   .fl-tools button:hover:not(:disabled) { background: #1e1e1e; }
@@ -99,6 +121,7 @@ const EV = {
   CH_TYPE: 21,
   CH_INSERT: 104,
   CH_INSERT_LEGACY: 22,
+  SAMPLE_PATH: 196,
   NAME: 203,
   PLUGIN_INTERNAL: 201,
   PLUGIN_WRAPPER: 212,
@@ -167,12 +190,38 @@ function parse_flp(buf) {
   const format_ev = evs.find(e => e.id === EV.FORMAT);
   flp.format = format_ev ? dv.getUint32(format_ev.data, true) : null;
   try { flp.mixer = parse_mixer(flp); } catch (err) { flp.mixer_error = err.message; }
+  flp.sounds = parse_sounds(flp);
   return flp;
 }
 
 const body = (flp, e) => flp.buf.subarray(e.data, e.end);
 const text16 = (flp, e) => utf16.decode(body(flp, e)).replace(/\0+$/, "");
 const int_val = (flp, e) => e.end - e.data === 1 ? flp.buf[e.data] : e.end - e.data === 2 ? flp.dv.getUint16(e.data, true) : flp.dv.getInt32(e.data, true);
+
+const AUDIO_PATH = new RegExp(String.raw`(?:[A-Za-z]:\\|%FL[A-Za-z]+%)[^\x00-\x1f"<>|*?]{0,400}?\.(?:wav|mp3|ogg|flac|aiff?|wv|m4a|opus|rx2|rex|sf2|wma)(?![A-Za-z0-9])`, "gi");
+
+function audio_paths(bytes) {
+  const found = new Set();
+  for (const m of ascii.decode(bytes).matchAll(AUDIO_PATH)) found.add(utf8.decode(bytes.subarray(m.index, m.index + m[0].length)));
+  for (const off of [0, 1]) {
+    const n = (bytes.length - off) & ~1;
+    if (n > 0) for (const m of utf16.decode(bytes.subarray(off, off + n)).matchAll(AUDIO_PATH)) found.add(m[0]);
+  }
+  return [...found];
+}
+
+function parse_sounds(flp) {
+  const found = new Set();
+  for (const e of flp.evs) {
+    if (e.id === EV.SAMPLE_PATH) {
+      const path = text16(flp, e);
+      if (path) found.add(path);
+    } else if (e.id === EV.PLUGIN_DATA) {
+      for (const path of audio_paths(body(flp, e))) found.add(path);
+    }
+  }
+  return [...found];
+}
 
 function wrapper_records(bytes) {
   const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -296,7 +345,7 @@ function parse_slot(flp, from, term, real) {
   slot.plugin = {
     wrapper,
     name: (custom && text16(flp, custom)) || vst_name || internal_name,
-    vendor: recs.has(56) ? utf8.decode(recs.get(56)) : null,
+    vendor: recs.has(56) ? utf8.decode(recs.get(56)) : vst_name || internal_name === "Fruity Wrapper" ? null : "Image-Line",
     kind: vst_name ? "vst" : internal_name,
   };
   return slot;
@@ -746,6 +795,54 @@ function suffixed(name, version) {
   return dot > 0 ? `${name.slice(0, dot)}_${version}${name.slice(dot)}` : `${name}_${version}`;
 }
 
+async function copy_text(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const area = el("textarea", { value: text });
+    document.body.append(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+}
+
+function copy_button(label, get_text) {
+  const btn = el("button", { className: "ghost", textContent: label });
+  btn.onclick = async () => {
+    await copy_text(get_text());
+    btn.textContent = "copied";
+    setTimeout(() => { btn.textContent = label; }, 1200);
+  };
+  return btn;
+}
+
+function sound_row(path) {
+  const cut = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/")) + 1;
+  return el("div", { className: "sound" },
+    el("div", { className: "sound-main" },
+      el("div", { className: "sound-path" }, path.slice(0, cut), el("span", { className: "file", textContent: path.slice(cut) }))),
+    copy_button("copy", () => path));
+}
+
+function render_sounds(items) {
+  const all = [...new Set(items.flatMap(i => i.flp.sounds))];
+  const list = el("div", { className: "sounds-list" });
+  for (const item of items) {
+    if (items.length > 1) list.append(el("div", { className: "sounds-group", textContent: `${item.label} · ${item.flp.sounds.length}` }));
+    list.append(...item.flp.sounds.map(sound_row));
+  }
+  if (!all.length) list.append(el("div", { className: "muted sounds-empty", textContent: "no sound files in this project" }));
+  const copy_all = copy_button("copy all", () => all.join("\n"));
+  copy_all.disabled = !all.length;
+  return el("div", { className: "sounds-panel" },
+    el("div", { className: "sounds-head" },
+      el("div", { className: "sounds-title" }, "sounds",
+        el("span", { className: "muted", textContent: `${all.length} file${all.length === 1 ? "" : "s"}` })),
+      copy_all),
+    list);
+}
+
 function notice(kind, icon, title, ...body) {
   return el("div", { className: `notice ${kind}` },
     el("span", { className: "notice-icon", textContent: icon }),
@@ -830,7 +927,8 @@ function render_mixer(item) {
       : `slot ${slot.index + 1} (empty)`;
     const row = el("div", { className: "fl-slot" + (p ? "" : " empty") + (removed ? " removed" : ""), title: tip },
       el("span", { className: "arrow", textContent: "▶" }),
-      el("span", { className: "pname", textContent: p ? p.name : `slot ${slot.index + 1}` }));
+      el("span", { className: "pname" }, p ? p.name : `slot ${slot.index + 1}`,
+        p?.vendor ? el("span", { className: "vendor", textContent: ` (${p.vendor})` }) : ""));
     if (p?.links) row.append(el("span", { className: "links", textContent: `⟲${p.links}` }));
     if (p) {
       row.append(el("span", { className: "fl-tools" },
@@ -905,7 +1003,8 @@ function render_mixer(item) {
 
 async function handle_file(file) {
   const card = el("div", { className: "card" }, el("h2", { textContent: file.name }));
-  $out.prepend(card);
+  const project = el("div", { className: "project" }, card);
+  $out.prepend(project);
   try {
     const buf = new Uint8Array(await file.arrayBuffer());
     const is_zip = buf[0] === 0x50 && buf[1] === 0x4b;
@@ -954,6 +1053,7 @@ async function handle_file(file) {
       ];
     });
     card.append(el("table", {}, el("tr", {}, el("th", { textContent: "project" }), el("th", { textContent: "current version" }), el("th", { textContent: "target version" })), ...rows), btn, status);
+    if (valid.length) project.append(render_sounds(valid));
     update();
     for (const i of valid) { i.saved_sig = unsaved_signature(i); loaded_items.push(i); }
 
